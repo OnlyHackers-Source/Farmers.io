@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String
+  role      String
+  phone     String
+  address   String
+  password  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  productsOwned Product[]     @relation("ProductOwner")
+  ordersBought  Order[]       @relation("OrderBuyer")
+  ordersSold    Order[]       @relation("OrderSeller")
+  rentalsRented RentalOrder[] @relation("RentalRenter")
+  rentalsOwned  RentalOrder[] @relation("RentalOwner")
+
+  @@map("profiles")
+}
+
+model Product {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  price             Decimal
+  quantity          Int
+  category          String
+  ownerId           String
+  isRental          Boolean  @default(false)
+  rentalPricePerDay Decimal?
+  createdAt         DateTime @default(now())
+
+  // Relations
+  owner        Profile       @relation("ProductOwner", fields: [ownerId], references: [id])
+  orders       Order[]
+  rentalOrders RentalOrder[]
+
+  @@map("products")
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  buyerId     String
+  sellerId    String
+  productId   String
+  quantity    Int
+  totalAmount Decimal
+  status      String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  buyer   Profile @relation("OrderBuyer", fields: [buyerId], references: [id])
+  seller  Profile @relation("OrderSeller", fields: [sellerId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("orders")
+}
+
+model RentalOrder {
+  id          String   @id @default(uuid())
+  renterId    String
+  ownerId     String
+  productId   String
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Decimal
+  status      String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  renter  Profile @relation("RentalRenter", fields: [renterId], references: [id])
+  owner   Profile @relation("RentalOwner", fields: [ownerId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("rental_orders")
+}
