@@ -30,6 +30,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Farmers Marketplace API' });
 });
 
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

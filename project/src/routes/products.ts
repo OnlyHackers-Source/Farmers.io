@@ -5,49 +5,71 @@ import prisma from '../lib/prisma';
 const router = Router();
 
 // Get all products
-router.get('/', async (req: Request, res: Response) => {
+router.get('/get', async (req, res) => {
   try {
     const products = await prisma.product.findMany({
       include: {
-        owner: true
-      }
+        owner: {
+          select: {
+            fullName: true, // Fetch farmer's name
+          },
+        },
+      },
     });
-    res.status(200).json(products);
+
+    // Transform data to match frontend expectations
+    const formattedProducts = products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      farmer: product.owner.fullName,
+      location: 'Unknown', // Add a location field to Product model if needed
+      price: Number(product.price), // Convert Decimal to number
+      quantity: product.quantity.toString(), // Convert Int to string
+      category: product.category.toLowerCase(),
+      image: 'https://via.placeholder.com/500', // Placeholder; add image field later
+      rating: 4.5, // Static for now; add rating field if needed
+      reviews: Math.floor(Math.random() * 300), // Random for now; add reviews field if needed
+    }));
+
+    res.status(200).json(formattedProducts);
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    console.error('Failed to fetch products:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
 
 // Create a product
-router.post('/', [
-
-  body('name').notEmpty(),
-  body('price').isNumeric(),
-  body('quantity').isNumeric(),
-  body('category').notEmpty()
-], async (req: Request, res: Response) => {
+router.post('/add', async (req, res) => {
   try {
-    const { name, description, price, quantity, category, isRental, rentalPricePerDay } = req.body;
+    const { name, category, price, quantity, description } = req.body;
 
-    const product = await prisma.product.create({
+    // Basic validation
+    if (!name || !price || !quantity || !category) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Get ownerId from localStorage (assuming frontend sends it or use auth later)
+    const ownerId = req.body.ownerId; // Temporary fallback
+
+    const newProduct = await prisma.product.create({
       data: {
         name,
-        description,
-        price: parseFloat(price),
-        quantity,
         category,
-        ownerId: req.body.id,
-        isRental: isRental || false,
-        rentalPricePerDay: rentalPricePerDay ? parseFloat(rentalPricePerDay) : null
+        price: parseFloat(price),
+        quantity: parseInt(quantity),
+        description: description || null,
+        ownerId,
+        createdAt: new Date(),
       },
-      include: {
-        owner: true
-      }
     });
 
-    res.status(201).json(product);
+    res.status(201).json({
+      message: 'Product added successfully',
+      product: newProduct,
+    });
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    console.error('Failed to add product:', error);
+    res.status(500).json({ error: 'Failed to add product' });
   }
 });
 

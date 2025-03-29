@@ -5,49 +5,36 @@ import prisma from '../lib/prisma';
 const router = Router();
 
 // Create a rental order
-router.post('/', [
-
-  body('product_id').notEmpty(),
-  body('start_date').isISO8601(),
-  body('end_date').isISO8601(),
-], async (req: Request, res: Response) => {
+// POST /api/rentals - Add a rental request
+router.post('/create', async (req, res) => {
   try {
-    const { product_id, start_date, end_date } = req.body;
+    const { equipmentType, startDate, endDate, purpose, contactNumber, deliveryAddress, renterId } = req.body;
 
-    const product = await prisma.product.findFirst({
-      where: {
-        id: product_id,
-        isRental: true
-      }
-    });
-
-    if (!product) throw new Error('Rental product not found');
-
-    const days = Math.ceil(
-      (new Date(end_date).getTime() - new Date(start_date).getTime()) / (1000 * 3600 * 24)
-    );
-    const total_amount = product.rentalPricePerDay!.toNumber() * days;
+    // Validation
+    if (!equipmentType || !startDate || !endDate || !purpose || !renterId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
     const rental = await prisma.rentalOrder.create({
       data: {
-        renterId: req.body.id,
-        ownerId: product.ownerId,
-        productId: product_id,
-        startDate: new Date(start_date),
-        endDate: new Date(end_date),
-        totalAmount: total_amount,
-        status: 'pending'
+        equipmentType,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        purpose,
+        contactNumber: contactNumber || null,
+        deliveryAddress: deliveryAddress || null,
+        renterId,
+        status: 'pending', // Initial status
       },
-      include: {
-        renter: true,
-        owner: true,
-        product: true
-      }
     });
 
-    res.status(201).json(rental);
+    res.status(201).json({
+      message: 'Rental request submitted successfully',
+      rental,
+    });
   } catch (error) {
-    res.status(400).json({ error: (error as Error).message });
+    console.error('Failed to submit rental request:', error);
+    res.status(500).json({ error: 'Failed to submit rental request' });
   }
 });
 

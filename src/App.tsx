@@ -8,6 +8,9 @@ import './i18n';
 import AuthForm from './pages/authForms';
 import Dashboard from './pages/Dashboard';
 import Dashboard2 from './pages/Dashboard-2';
+import RentalForm from './components/RentalForm';
+import ProtectedRoute from './components/ProtectedRoute'; // Import the new component
+
 function App() {
   return (
     <Router>
@@ -15,12 +18,18 @@ function App() {
         <Navbar />
         <main className="max-w-7xl mt-16 mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Marketplace />} />
             <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/add-product" element={<AddProduct />} />
             <Route path="/login" element={<AuthForm type="login" />} />
             <Route path="/register" element={<AuthForm type="register" />} />
-            <Route path="/farmers/:id" element={<Dashboard2 />} />
+
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/add-product" element={<AddProduct />} />
+              <Route path="/farmers/:id" element={<Dashboard2 />} />
+              <Route path="/rent-equipment" element={<RentalForm />} />
+            </Route>
           </Routes>
         </main>
         <ChatBot />

@@ -31,10 +31,12 @@ export default function AuthForm({ type }: AuthFormProps) {
             if (type === 'login') {
                 const response = await authApi.login(email, password);
                 localStorage.setItem('token', response.data.token);
-                navigate(`/${response.data.id}`);
+                localStorage.setItem("customerId", response.data.id)
+                navigate(`/farmers/${response.data.id}`);
             } else {
                 const response = await authApi.signup({ email, password, name, phone: mobileNumber, role, address: address as string });
                 localStorage.setItem('token', response.data.token);
+                localStorage.setItem("customerId", response.data.id)
                 navigate(`/farmers/${response.data.id}`);
             }
         } catch (err) {
@@ -45,7 +47,7 @@ export default function AuthForm({ type }: AuthFormProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+        <div className="min-h-screen  flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-800">
