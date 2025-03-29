@@ -69,20 +69,24 @@ model Order {
 }
 
 model RentalOrder {
-  id          String   @id @default(uuid())
-  renterId    String
-  ownerId     String
-  productId   String
-  startDate   DateTime
-  endDate     DateTime
-  totalAmount Decimal
-  status      String
-  createdAt   DateTime @default(now())
+  id              String    @id @default(uuid())
+  renterId        String
+  ownerId         String?   // Optional until assigned
+  productId       String?   // Optional until specific equipment is assigned
+  equipmentType   String    // Added from RentalForm
+  startDate       DateTime
+  endDate         DateTime
+  purpose         String    // Added from RentalForm
+  contactNumber   String?   // Added from RentalForm, optional
+  deliveryAddress String?   // Added from RentalForm, optional
+  totalAmount     Decimal?  // Optional until calculated
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
 
   // Relations
-  renter  Profile @relation("RentalRenter", fields: [renterId], references: [id])
-  owner   Profile @relation("RentalOwner", fields: [ownerId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
+  renter  Profile  @relation("RentalRenter", fields: [renterId], references: [id])
+  owner   Profile? @relation("RentalOwner", fields: [ownerId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
 
   @@map("rental_orders")
 }

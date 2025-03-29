@@ -1,6 +1,7 @@
-import { productsApi } from '@/api/api';
+import axios from 'axios';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast, { Toaster } from 'react-hot-toast'; // Import toast and Toaster
 
 export function AddProduct() {
   const { t } = useTranslation();
@@ -11,29 +12,24 @@ export function AddProduct() {
     price: '',
     quantity: '',
     description: '',
-    // images: null
   });
-  const getStoredProducts = () => {
-    const stored = localStorage.getItem('products');
-    return stored ? JSON.parse(stored) : [];
-  };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Get existing products
-      const existingProducts = getStoredProducts();
+      // Get ownerId from localStorage (set during login)
+      const ownerId = localStorage.getItem('customerId');
 
-      // Add new product with an ID
-      const newProduct = {
+      if (!ownerId) {
+        toast.error('Please log in to add a product');
+        return;
+      }
+
+      // Send POST request to backend
+      const response = await axios.post('http://localhost:5003/products/add', {
         ...product,
-        id: Date.now(), // Simple way to generate unique ID
-        createdAt: new Date().toISOString()
-      };
-
-      // Save to localStorage
-      localStorage.setItem('products', JSON.stringify([...existingProducts, newProduct]));
+        ownerId, // Include ownerId in the request
+      });
 
       // Reset form
       setProduct({
@@ -44,23 +40,36 @@ export function AddProduct() {
         description: '',
       });
 
-      alert('Product added successfully!');
+      // Show success toast
+      toast.success(response.data.message || 'Product added successfully!', {
+        duration: 4000, // 4 seconds
+        position: 'top-right',
+      });
     } catch (error) {
       console.error('Failed to save product:', error);
-      alert('Failed to save product');
+      // Show error toast
+      toast.error('Failed to save product', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setProduct(prev => ({
+    setProduct((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
-
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Add Toaster component to display toasts */}
+      <Toaster />
+      
       <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('common.addProduct')}</h1>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
@@ -134,6 +143,7 @@ export function AddProduct() {
             required
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Images</label>
           <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">

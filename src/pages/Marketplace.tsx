@@ -1,46 +1,22 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, Filter, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
+import axios from 'axios';
 
-const SAMPLE_PRODUCTS = [
-  {
-    id: 1,
-    name: 'Organic Rice',
-    farmer: 'Rajesh Kumar',
-    location: 'Punjab',
-    price: 2500,
-    quantity: '100',
-    category: 'grains',
-    image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-    rating: 4.5,
-    reviews: 128
-  },
-  {
-    id: 2,
-    name: 'Fresh Wheat',
-    farmer: 'Amit Singh',
-    location: 'Haryana',
-    price: 2200,
-    quantity: '50',
-    category: 'grains',
-    image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-    rating: 4.2,
-    reviews: 95
-  },
-  {
-    id: 3,
-    name: 'Fresh Tomatoes',
-    farmer: 'Priya Patel',
-    location: 'Maharashtra',
-    price: 40,
-    quantity: '20',
-    category: 'vegetables',
-    image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-    rating: 4.8,
-    reviews: 234
-  }
-];
+// Define the product type based on backend response
+interface Product {
+  id: string;
+  name: string;
+  farmer: string;
+  location: string;
+  price: number;
+  quantity: string;
+  category: string;
+  image: string;
+  rating: number;
+  reviews: number;
+}
 
 type SortOption = 'priceLowToHigh' | 'priceHighToLow' | 'newest' | 'popular';
 
@@ -52,37 +28,68 @@ export function Marketplace() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [sortBy, setSortBy] = useState<SortOption>('popular');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]); // State for dynamic products
+  const [loading, setLoading] = useState(true); // Loading state
+  const [error, setError] = useState<string | null>(null); // Error state
+
+  // Fetch products from backend on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get('http://localhost:5003/products/get');
+        setProducts(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch products:', err);
+        setError('Failed to load products');
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
-    return SAMPLE_PRODUCTS.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.farmer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.location.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = !selectedCategory || product.category === selectedCategory;
-      const matchesLocation = !selectedLocation || product.location === selectedLocation;
-      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+    return products
+      .filter((product) => {
+        const matchesSearch =
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.farmer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.location.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesSearch && matchesCategory && matchesLocation && matchesPrice;
-    }).sort((a, b) => {
-      switch (sortBy) {
-        case 'priceLowToHigh':
-          return a.price - b.price;
-        case 'priceHighToLow':
-          return b.price - a.price;
-        case 'popular':
-          return b.reviews - a.reviews;
-        default:
-          return 0;
-      }
-    });
-  }, [searchQuery, selectedCategory, selectedLocation, priceRange, sortBy]);
+        const matchesCategory = !selectedCategory || product.category === selectedCategory;
+        const matchesLocation = !selectedLocation || product.location === selectedLocation;
+        const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+
+        return matchesSearch && matchesCategory && matchesLocation && matchesPrice;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'priceLowToHigh':
+            return a.price - b.price;
+          case 'priceHighToLow':
+            return b.price - a.price;
+          case 'popular':
+            return b.reviews - a.reviews;
+          default:
+            return 0;
+        }
+      });
+  }, [searchQuery, selectedCategory, selectedLocation, priceRange, sortBy, products]);
+
+  if (loading) {
+    return <div className="text-center py-12">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-12 text-red-500">{error}</div>;
+  }
 
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold text-gray-900">{t('marketplace.title')}</h1>
-        
+
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           <div className="relative flex-grow md:flex-grow-0">
             <input
@@ -94,7 +101,7 @@ export function Marketplace() {
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
-          
+
           <Dialog.Root open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <Dialog.Trigger asChild>
               <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -126,9 +133,13 @@ export function Marketplace() {
                       onChange={(e) => setSelectedCategory(e.target.value)}
                     >
                       <option value="">{t('common.categories')}</option>
-                      {Object.entries(t('marketplace.filters.categories', { returnObjects: true })).map(([key, value]) => (
-                        <option key={key} value={key}>{value}</option>
-                      ))}
+                      {Object.entries(t('marketplace.filters.categories', { returnObjects: true })).map(
+                        ([key, value]) => (
+                          <option key={key} value={key}>
+                            {value}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
 
@@ -178,9 +189,13 @@ export function Marketplace() {
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as SortOption)}
                     >
-                      {Object.entries(t('marketplace.filters.sort', { returnObjects: true })).map(([key, value]) => (
-                        <option key={key} value={key}>{value}</option>
-                      ))}
+                      {Object.entries(t('marketplace.filters.sort', { returnObjects: true })).map(
+                        ([key, value]) => (
+                          <option key={key} value={key}>
+                            {value}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
 
@@ -216,13 +231,12 @@ export function Marketplace() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="bg-white rounded-xl shadow-sm overflow-hidden transform transition-transform hover:scale-[1.02] hover:shadow-md">
+            <div
+              key={product.id}
+              className="bg-white rounded-xl shadow-sm overflow-hidden transform transition-transform hover:scale-[1.02] hover:shadow-md"
+            >
               <div className="relative">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
+                <img src={product.image} alt={product.name} className="w-full h-48 object-cover" />
                 <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-medium text-gray-600">
                   ★ {product.rating}
                 </div>
@@ -230,11 +244,15 @@ export function Marketplace() {
               <div className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                  <span className="text-green-600 font-semibold">₹{product.price}/{t('marketplace.perKg')}</span>
+                  <span className="text-green-600 font-semibold">
+                    ₹{product.price}/{t('marketplace.perKg')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
                   <img
-                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(product.farmer)}`}
+                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+                      product.farmer
+                    )}`}
                     alt={product.farmer}
                     className="w-6 h-6 rounded-full bg-gray-200"
                   />
