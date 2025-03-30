@@ -38,6 +38,7 @@ export function Marketplace() {
       try {
         const response = await axios.get('http://localhost:5003/products/get');
         setProducts(response.data);
+        console.log(response.data)
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -236,7 +237,7 @@ export function Marketplace() {
               className="bg-white rounded-xl shadow-sm overflow-hidden transform transition-transform hover:scale-[1.02] hover:shadow-md"
             >
               <div className="relative">
-                <img src={product.image} alt={product.name} className="w-full h-48 object-cover" />
+                <img src="http://localhost:5003/uploads/1743347612428-468178520.png" alt={product.name} className="w-full h-48 object-cover" />
                 <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-medium text-gray-600">
                   ★ {product.rating}
                 </div>

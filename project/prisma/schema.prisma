@@ -40,6 +40,7 @@ model Product {
   ownerId           String
   isRental          Boolean  @default(false)
   rentalPricePerDay Decimal?
+  image             String?  // New field for image path
   createdAt         DateTime @default(now())
 
   // Relations

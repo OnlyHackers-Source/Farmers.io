@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import toast, { Toaster } from 'react-hot-toast'; // Import toast and Toaster
+import toast, { Toaster } from 'react-hot-toast';
 
 export function AddProduct() {
   const { t } = useTranslation();
@@ -13,22 +13,28 @@ export function AddProduct() {
     quantity: '',
     description: '',
   });
+  const [image, setImage] = useState<File | null>(null); // State for image file
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Get ownerId from localStorage (set during login)
       const ownerId = localStorage.getItem('customerId');
-
       if (!ownerId) {
         toast.error('Please log in to add a product');
         return;
       }
 
-      // Send POST request to backend
-      const response = await axios.post('http://localhost:5003/products/add', {
-        ...product,
-        ownerId, // Include ownerId in the request
+      const formData = new FormData();
+      formData.append('name', product.name);
+      formData.append('category', product.category);
+      formData.append('price', product.price);
+      formData.append('quantity', product.quantity);
+      formData.append('description', product.description);
+      formData.append('ownerId', ownerId);
+      if (image) formData.append('image', image); // Append image if selected
+
+      const response = await axios.post('http://localhost:5003/products/add', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       // Reset form
@@ -39,19 +45,11 @@ export function AddProduct() {
         quantity: '',
         description: '',
       });
-
-      // Show success toast
-      toast.success(response.data.message || 'Product added successfully!', {
-        duration: 4000, // 4 seconds
-        position: 'top-right',
-      });
+      setImage(null); // Reset image
+      toast.success(response.data.message || 'Product added successfully!');
     } catch (error) {
       console.error('Failed to save product:', error);
-      // Show error toast
-      toast.error('Failed to save product', {
-        duration: 4000,
-        position: 'top-right',
-      });
+      toast.error('Failed to save product');
     }
   };
 
@@ -59,19 +57,19 @@ export function AddProduct() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setProduct((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setProduct((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Add Toaster component to display toasts */}
       <Toaster />
-      
       <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('common.addProduct')}</h1>
-
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Name</label>
@@ -84,7 +82,6 @@ export function AddProduct() {
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">Category</label>
           <select
@@ -100,7 +97,6 @@ export function AddProduct() {
             <option value="Meat">Meat</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">Price per unit</label>
           <div className="mt-1 relative rounded-md shadow-sm">
@@ -118,7 +114,6 @@ export function AddProduct() {
             />
           </div>
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">Quantity Available</label>
           <input
@@ -131,7 +126,6 @@ export function AddProduct() {
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">Description</label>
           <textarea
@@ -143,40 +137,15 @@ export function AddProduct() {
             required
           />
         </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700">Product Images</label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-            <div className="space-y-1 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                stroke="currentColor"
-                fill="none"
-                viewBox="0 0 48 48"
-                aria-hidden="true"
-              >
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <div className="flex text-sm text-gray-600">
-                <label
-                  htmlFor="file-upload"
-                  className="relative cursor-pointer bg-white rounded-md font-medium text-green-600 hover:text-green-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-green-500"
-                >
-                  <span>Upload a file</span>
-                  <input id="file-upload" name="file-upload" type="file" className="sr-only" />
-                </label>
-                <p className="pl-1">or drag and drop</p>
-              </div>
-              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-            </div>
-          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+          />
         </div>
-
         <div>
           <button
             type="submit"
